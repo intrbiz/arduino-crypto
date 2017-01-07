@@ -15,6 +15,7 @@
 #include <osapi.h>
 
 #define SHA256_SIZE             32
+#define SHA256HMAC_SIZE         32
 #define AES_MAXROUNDS           14
 #define AES_BLOCKSIZE           16
 #define AES_IV_SIZE             16

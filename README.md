@@ -1,5 +1,5 @@
-ESP8266 Crypto
-==============
+# ESP8266 Crypto
+
 This is a minimal, lightweight crypto library for the ESP8266 IOT device.  It 
 provides the following functions:
 
@@ -12,8 +12,41 @@ The SHA256 and AES implementations are based upon the implementations in axTLS
 except ported to the ESP8266 Arduino platform, credit to Cameron Rich for the 
 axTLS project.
 
-License
--------
+## Usage
+
+### SHA256HMAC
+
+The following snippet demonstrates how to compute the SHA256 HMAC authentication 
+code for a message.
+
+    /* Include the crypto library into your project */
+    #include <Crypto.h>
+    
+    /* The length of the key we will use for this HMAC */
+    /* The key can be of any length, 16 and 32 are common */
+    #define KEY_LENGTH 16
+    
+    /* Define our */
+    byte key[KEY_LENGTH] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    
+    /* Create the HMAC instance with our key */
+    SHA256HMAC hmac(key, KEY_LENGTH);
+    
+    /* Update the HMAC with our message, we can call this as many times as we need */
+    hmac.doUpdate(_buffer, 2 + AES_IV_SIZE + paddedLength);
+    
+    /* Finish the HMAC calculation and return the authentication code */
+    byte authCode[SHA256HMAC_SIZE];
+    hmac.doFinal(authCode);
+    
+    /* authCode now contains our 32 byte authentication code */
+    for (byte i; i < SHA256HMAC_SIZE; i++)
+    {
+        Serial.print(authCode[i], HEX);
+    }
+
+## License
+
 ESP8266 Crypto
 Copyright (c) 2016, Chris Ellis, with portions derived from axTLS
 All rights reserved.
@@ -38,9 +71,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+## Author
 
-Author
-------
 Chris Ellis
 
 Twitter: @intrbiz
