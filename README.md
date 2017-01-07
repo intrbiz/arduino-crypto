@@ -33,7 +33,8 @@ code for a message.
     SHA256HMAC hmac(key, KEY_LENGTH);
     
     /* Update the HMAC with our message, we can call this as many times as we need */
-    hmac.doUpdate(_buffer, 2 + AES_IV_SIZE + paddedLength);
+    char *message = "Hello World";
+    hmac.doUpdate(message, strlen(message));
     
     /* Finish the HMAC calculation and return the authentication code */
     byte authCode[SHA256HMAC_SIZE];
@@ -43,6 +44,30 @@ code for a message.
     for (byte i; i < SHA256HMAC_SIZE; i++)
     {
         Serial.print(authCode[i], HEX);
+    }
+
+### SHA256
+
+The following snippet demonstrates how to compute the SHA256 hash of a message.
+
+    /* Create a SHA256 hash */
+    SHA256 hasher;
+    
+    /* Update the hash with your message, as many times as you like */
+    char *hello = "Hello World";
+    hasher.doUpdate(hello, strlen(hello));
+    char *goodbye = "Goodbye World";
+    hasher.doUpdate(goodbye, strlen(goodbye));
+    
+    
+    /* Compute the final hash */
+    byte hash[SHA256_SIZE];
+    hasher.doFinal(hash);
+    
+    /* hash now contains our 32 byte hash */
+    for (byte i; i < SHA256_SIZE; i++)
+    {
+        Serial.print(hash[i], HEX);
     }
 
 ## License
