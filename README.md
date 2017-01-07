@@ -32,9 +32,16 @@ code for a message.
     /* Create the HMAC instance with our key */
     SHA256HMAC hmac(key, KEY_LENGTH);
     
-    /* Update the HMAC with our message, we can call this as many times as we need */
-    char *message = "Hello World";
-    hmac.doUpdate(message, strlen(message));
+    /* Update the HMAC with just a plain string (null terminated) */
+    hmac.doUpdate("Hello World");
+    
+    /* And or with a string and length */
+    const char *goodbye = "GoodBye World";
+    hmac.doUpdate(goodbye, strlen(goodbye));
+    
+    /* And or with a binary message */
+    byte message[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    hmac.doUpdate(message, sizeof(message));
     
     /* Finish the HMAC calculation and return the authentication code */
     byte authCode[SHA256HMAC_SIZE];
@@ -54,11 +61,15 @@ The following snippet demonstrates how to compute the SHA256 hash of a message.
     SHA256 hasher;
     
     /* Update the hash with your message, as many times as you like */
-    char *hello = "Hello World";
+    const char *hello = "Hello World";
     hasher.doUpdate(hello, strlen(hello));
-    char *goodbye = "Goodbye World";
-    hasher.doUpdate(goodbye, strlen(goodbye));
     
+    /* Update the hash with just a plain string*/
+    hasher.doUpdate("Goodbye World");
+    
+    /* Update the hash with a binary message */
+    byte message[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    hasher.doUpdate(message, sizeof(message));
     
     /* Compute the final hash */
     byte hash[SHA256_SIZE];

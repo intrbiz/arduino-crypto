@@ -34,6 +34,8 @@ class SHA256
          * Update the hash with new data
          */
         void doUpdate(const byte *msg, int len);
+        void doUpdate(const char *msg, unsigned int len) { doUpdate((byte*) msg, len); }
+        void doUpdate(const char *msg) { doUpdate((byte*) msg, strlen(msg)); }
         /**
          * Compute the final hash and store it in [digest], digest must be 
          * at least 32 bytes
@@ -68,6 +70,8 @@ class SHA256HMAC
          * Update the hash with new data
          */
         void doUpdate(const byte *msg, unsigned int len);
+        void doUpdate(const char *msg, unsigned int len) { doUpdate((byte*) msg, len); }
+        void doUpdate(const char *msg) { doUpdate((byte*) msg, strlen(msg)); }
         /**
          * Compute the final hash and store it in [digest], digest must be 
          * at least 32 bytes
