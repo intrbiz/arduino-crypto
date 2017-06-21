@@ -795,6 +795,9 @@ SHA256HMAC::SHA256HMAC(const byte *key, unsigned int keyLen)
         // bytes from key
         memcpy(theKey, key, keyLen);
     }
+    // explicitly zero pads
+    memset(_innerKey, 0, SHA256HMAC_BLOCKSIZE);
+    memset(_outerKey, 0, SHA256HMAC_BLOCKSIZE);
     // compute the keys
     blockXor(theKey, _innerKey, HMAC_IPAD, SHA256HMAC_BLOCKSIZE);
     blockXor(theKey, _outerKey, HMAC_OPAD, SHA256HMAC_BLOCKSIZE);
