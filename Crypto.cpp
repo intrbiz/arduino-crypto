@@ -780,31 +780,26 @@ uint32_t RNG::getLong()
 SHA256HMAC::SHA256HMAC(const byte *key, unsigned int keyLen)
 {
     // sort out the key
-    byte theKey[SHA256_SIZE];
-    if (keyLen > SHA256_SIZE)
+    byte theKey[SHA256HMAC_BLOCKSIZE];
+    memset(theKey, 0, SHA256HMAC_BLOCKSIZE);
+    if (keyLen > SHA256HMAC_BLOCKSIZE)
     {
         // take a hash of the key
         SHA256 keyHahser;
         keyHahser.doUpdate(key, keyLen);
         keyHahser.doFinal(theKey);
     }
-    else if (keyLen < SHA256_SIZE)
+    else 
     {
-        // pad the key with zeros
-        memset(theKey, 0, SHA256_SIZE);
-        memcpy(theKey, key, keyLen);
-    }
-    else
-    {
+        // we already set the buffer to 0s, so just copy keyLen
+        // bytes from key
         memcpy(theKey, key, keyLen);
     }
     // compute the keys
-    memset(_innerKey, 0, SHA256_SIZE);
-    memset(_outerKey, 0, SHA256_SIZE);
-    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256_SIZE);
-    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256_SIZE);
+    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256HMAC_BLOCKSIZE);
+    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256HMAC_BLOCKSIZE);
     // start the intermediate hash
-    _hash.doUpdate(_innerKey, SHA256_SIZE);
+    _hash.doUpdate(_innerKey, SHA256HMAC_BLOCKSIZE);
 }
 
 void SHA256HMAC::doUpdate(const byte *msg, unsigned int len)
@@ -819,7 +814,7 @@ void SHA256HMAC::doFinal(byte *digest)
     _hash.doFinal(interHash);
     // compute the final hash
     SHA256 finalHash;
-    finalHash.doUpdate(_outerKey, SHA256_SIZE);
+    finalHash.doUpdate(_outerKey, SHA256HMAC_BLOCKSIZE);
     finalHash.doUpdate(interHash, SHA256_SIZE);
     finalHash.doFinal(digest);
 }
