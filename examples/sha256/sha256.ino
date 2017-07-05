@@ -29,8 +29,9 @@ void setup()
   hasher.doFinal(hash);
   
   /* hash now contains our 32 byte hash */
-  for (byte i; i < SHA256_SIZE; i++)
+  for (byte i=0; i < SHA256_SIZE; i++)
   {
+      if (hash[i]<0x10) { Serial.print('0'); }
       Serial.print(hash[i], HEX);
   }
 }

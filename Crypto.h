@@ -16,6 +16,7 @@
 
 #define SHA256_SIZE             32
 #define SHA256HMAC_SIZE         32
+#define SHA256HMAC_BLOCKSIZE    64
 #define AES_MAXROUNDS           14
 #define AES_BLOCKSIZE           16
 #define AES_IV_SIZE             16
@@ -84,8 +85,8 @@ class SHA256HMAC
     private:
         void blockXor(const byte *in, byte *out, byte val, byte len);
         SHA256 _hash;
-        byte _innerKey[SHA256_SIZE];
-        byte _outerKey[SHA256_SIZE];
+        byte _innerKey[SHA256HMAC_BLOCKSIZE];
+        byte _outerKey[SHA256HMAC_BLOCKSIZE];
 };
 
 /**
