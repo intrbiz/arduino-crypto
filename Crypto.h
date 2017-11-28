@@ -6,7 +6,7 @@
  * 
  * Ported and refactored by Chris Ellis 2016.
  * pkcs7 padding routines added by Mike Killewald Nov 26, 2017 (adopted from https://github.com/spaniakos/AES).
- *
+ * 
  */
 
 #ifndef CRYPTO_h
@@ -93,7 +93,7 @@ class SHA256HMAC
 /**
  * AES 128 and 256, based on code from axTLS
  */
- class AES
+class AES
 {
     public:
         typedef enum
@@ -108,24 +108,24 @@ class SHA256HMAC
         } CIPHER_MODE;
         /**
          * Create this cipher instance in either encrypt or decrypt mode
-         *
-         * Use the given [key] which must be 16 bytes long for AES 128 and
+         * 
+         * Use the given [key] which must be 16 bytes long for AES 128 and 
          *  32 bytes for AES 256
-         *
+         * 
          * Use the given [iv] initialistion vection which must be 16 bytes long
-         *
+         * 
          * Use the either AES 128 or AES 256 as specified by [mode]
-         *
+         * 
          * Either encrypt or decrypt as specified by [cipherMode]
          */
         AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode);
         /**
          * Either encrypt or decrypt [in] and store into [out] for [length] bytes.
-         *
+         * 
          * Note: the length must be a multiple of 16 bytes
          */
         void process(const uint8_t *in, uint8_t *out, int length);
-    
+
         /** Getter method for size
          *
          * This function returns the size
@@ -172,7 +172,7 @@ class SHA256HMAC
          * @return true if correct / false if not
          */
         bool CheckPad(uint8_t* in, int lsize);
-    
+
     private:
         void encryptCBC(const uint8_t *in, uint8_t *out, int length);
         void decryptCBC(const uint8_t *in, uint8_t *out, int length);
@@ -186,6 +186,7 @@ class SHA256HMAC
         int _pad_size; // size of padding to add to plaintext
         int _size; // size of plaintext plus padding to be ciphered
         uint8_t _arr_pad[15];
+
         CIPHER_MODE _cipherMode;
 };
 
