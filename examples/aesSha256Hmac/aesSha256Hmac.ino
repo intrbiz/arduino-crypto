@@ -18,6 +18,7 @@ SHA256 sha256;
 
 // prints given block of given length in HEX
 void printBlock(uint8_t* block, int length) {
+  ESP.wdtFeed();
   Serial.print(" { ");
   for (int i=0; i<length; i++) {
     Serial.print(block[i], HEX);
@@ -41,18 +42,16 @@ void setup() {
   // keyHmac is a pointer poinging to the second 128 bits of "key material" stored in keyHashMAC
   keyEncrypt = keyHash;
   keyHmac = keyHash + AES_KEY_LENGTH;
-}
 
-void loop() {
-  // maximum packet length 239 bytes. A watch dog reset occurs during encryption on packet of 240 bytes or more.
-//  char packet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX"; 
-  char packet[] = "1234567890 abcdefghijklmnopqrstuvwxyz !@#$%^&*()_+{|\\:\"<>?-=[];'./,"; 
-//  char packet[] = "0123456789abcdef";
+  // maximum packet length for this example is 350 bytes. A crash occurs on larger packets.
+  char packet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\nabcdefghijklmnopqrstuvwxyzABCDEFGHI";
+  // char packet[] = "1234567890 abcdefghijklmnopqrstuvwxyz !@#$%^&*()_+{|\\:\"<>?-=[];'./,"; 
+  // char packet[] = "0123456789abcdef";
 
   Serial.println("On the sending side:");
 
   int packetSize = strlen(packet);
-  Serial.printf("Packet (%d bytes): ", packetSize);
+  Serial.printf("Packet (%d bytes):\n", packetSize);
   Serial.println(packet);
   
   Serial.print("Packet HEX");
@@ -66,11 +65,8 @@ void loop() {
 
   AES aes(keyEncrypt, iv, AES::AES_MODE_128, AES::CIPHER_ENCRYPT);
 
-  // create buffer for encrypted message with size that is a multiple of AES block size  aes.calc_size_n_pad(packetSize);
+  // create buffer for final message which will contain IV, encrypted message, and HMAC
   int encryptedSize = aes.calc_size_n_pad(packetSize);
-  uint8_t encrypted[encryptedSize];
-
-  // create buffer for final message which will contain IV, encrypted message, and HMAC 
   int ivEncryptedSize = encryptedSize + AES_KEY_LENGTH;
   int ivEncryptedHmacSize = ivEncryptedSize + SHA256HMAC_SIZE;
   uint8_t ivEncryptedHmac[ivEncryptedHmacSize];
@@ -78,29 +74,28 @@ void loop() {
   // copy IV to our final message buffer
   memcpy(ivEncryptedHmac, iv, AES_KEY_LENGTH);
 
+  // encrypted is a pointer that points to the encypted messages position in our final message buffer
+  uint8_t* encrypted = ivEncryptedHmac + AES_KEY_LENGTH;
+
   // AES 128 CBC and pkcs7 padding
+  ESP.wdtFeed();
   aes.process((uint8_t*)packet, encrypted, packetSize);
 
-  // append encrypted to our final message buffer
-  memcpy(ivEncryptedHmac+AES_KEY_LENGTH, encrypted, encryptedSize);
-
-  Serial.printf("Encrypted (%u bytes)", encryptedSize);
+  Serial.printf("Encrypted (%d bytes)", encryptedSize);
   printBlock(encrypted, encryptedSize);
+
+  // computedHmac is a pointer which points to the HMAC position in our final message buffer
+  uint8_t* computedHmac = encrypted + encryptedSize;
 
   // compute HMAC/SHA-256 with keyHmac
   SHA256HMAC hmac(keyHmac, HMAC_KEY_LENGTH);
   hmac.doUpdate(ivEncryptedHmac, ivEncryptedSize);
-
-  uint8_t computedHmac[SHA256HMAC_SIZE];
   hmac.doFinal(computedHmac);
 
   Serial.printf("Computed HMAC (%d bytes)", SHA256HMAC_SIZE);
   printBlock(computedHmac, SHA256HMAC_SIZE);
 
-  // append HMAC to our final message
-  memcpy(ivEncryptedHmac+AES_KEY_LENGTH+encryptedSize, computedHmac, SHA256HMAC_SIZE);
-
-  Serial.printf("IV | encrypted | HMAC (%u bytes)", ivEncryptedHmacSize);
+  Serial.printf("IV | encrypted | HMAC (%d bytes)", ivEncryptedHmacSize);
   printBlock(ivEncryptedHmac, ivEncryptedHmacSize);
   
   // base64 encode
@@ -108,8 +103,7 @@ void loop() {
   uint8_t encoded[encodedSize];
   encode_base64(ivEncryptedHmac, ivEncryptedHmacSize, encoded);
 
-  Serial.printf("Encoded (%u bytes): ", encodedSize);
-  Serial.println((char*)encoded);
+  Serial.printf("Base64 encoded to %d bytes\n", encodedSize);
 
   // Now on to the receiving side. This would normally be in a different skectch so we would
   // again SHA256 hash our secret key to obain keyEncrypt and KeyHmac on the remote side. 
@@ -123,27 +117,26 @@ void loop() {
   uint8_t decoded[decodedSize];
   decode_base64(encoded, decoded);
 
-  Serial.printf("Decoded HEX (%u bytes)", decodedSize);
+  Serial.printf("Received %d bytes\n", encodedSize);
+  Serial.printf("Base64 decoded IV | encrypted | HMAC (%d bytes)", decodedSize);
   printBlock(decoded, decodedSize);
  
-  // extract HMAC
-  uint8_t extractedHmac[SHA256HMAC_SIZE];
-  memcpy(extractedHmac, decoded+decodedSize-SHA256HMAC_SIZE, SHA256HMAC_SIZE);
+  // receivedHmac is a pointer which points to the received HMAC in our decoded message
+  uint8_t* receivedHmac = decoded+decodedSize-SHA256HMAC_SIZE;
 
   Serial.printf("Received HMAC (%d bytes)", SHA256HMAC_SIZE);
-  printBlock(extractedHmac, SHA256HMAC_SIZE); 
+  printBlock(receivedHmac, SHA256HMAC_SIZE); 
 
   // compute HMAC/SHA-256 with keyHmac
+  uint8_t remote_computedHmac[SHA256HMAC_SIZE];  
   SHA256HMAC remote_hmac(keyHmac, HMAC_KEY_LENGTH);
   remote_hmac.doUpdate(decoded, decodedSize-SHA256HMAC_SIZE);
-
-  uint8_t remote_computedHmac[SHA256HMAC_SIZE];
   remote_hmac.doFinal(remote_computedHmac);
 
-  Serial.printf("Computed HMAC (%u bytes)", SHA256HMAC_SIZE);
+  Serial.printf("Computed HMAC (%d bytes)", SHA256HMAC_SIZE);
   printBlock(remote_computedHmac, SHA256HMAC_SIZE);
 
-  if (*extractedHmac == *remote_computedHmac) {
+  if (*receivedHmac == *remote_computedHmac) {
     // extract IV
     memcpy(iv, decoded, AES_KEY_LENGTH);
 
@@ -154,16 +147,18 @@ void loop() {
     int decryptedSize = decodedSize - AES_KEY_LENGTH - SHA256HMAC_SIZE;
     char decrypted[decryptedSize];
     AES aesDecryptor(keyEncrypt, iv, AES::AES_MODE_128, AES::CIPHER_DECRYPT);
+    ESP.wdtFeed();
     aesDecryptor.process((uint8_t*)decoded + AES_KEY_LENGTH, (uint8_t*)decrypted, decryptedSize);  
     
-    Serial.printf("Decrypted HEX (%u bytes)", decryptedSize);
+    Serial.printf("Decrypted Packet HEX (%d bytes)", decryptedSize);
     printBlock((uint8_t*)decrypted, decryptedSize);
   
-    Serial.printf("Decrypted (%d bytes): ", strlen(decrypted));
+    Serial.printf("Decrypted Packet (%d bytes):\n", strlen(decrypted));
     Serial.println(decrypted);
+    ESP.wdtFeed();
   }
+}
 
-  Serial.println("");
-
-  ESP.deepSleep(0);
+void loop() {
+  delay(1);
 }
