@@ -141,23 +141,15 @@ class SHA256HMAC
          */
         void set_size(int sizel);
     
-        /** Calculates the size of the buffer needed to hold the cipher text.
-         *
-         * Calculates the size of the buffer needed to hold the cipher text
-         *
-         * @param text the plaintext character array
-         * @return an integer that is the size of buffer needed to hold the cipher text.
-         */
-        int calc_buffer_size(char* text);
-    
         /** Calculates the size of the plaintext and the padding.
          *
          * Calculates the size of the plaintext with the size of the
          * padding needed. Moreover it stores them in their class variables.
          *
          * @param in_size the size of the byte array ex sizeof(plaintext)
+         * @return an int the size of the plaintext plus the padding
          */
-        void calc_size_n_pad(int in_size);
+        int calc_size_n_pad(int in_size);
     
         /** Pads the plaintext
          *
@@ -191,8 +183,8 @@ class SHA256HMAC
         uint16_t _key_size;
         uint32_t _ks[(AES_MAXROUNDS+1)*8];
         uint8_t _iv[AES_IV_SIZE];
-        uint8_t _pad_size; // size of padding to add to plaintext
-        uint8_t _size; // size of plaintext to be ciphered
+        int _pad_size; // size of padding to add to plaintext
+        int _size; // size of plaintext plus padding to be ciphered
         uint8_t _arr_pad[15];
         CIPHER_MODE _cipherMode;
 };

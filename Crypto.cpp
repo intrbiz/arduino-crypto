@@ -1,4 +1,4 @@
-/**
+ /**
  * An extremely minimal crypto library for Arduino devices.
  * 
  * The SHA256 and AES implementations are derived from axTLS 
@@ -669,22 +669,14 @@ void AES::set_size(int sizel){
     _size = sizel;
 }
 
-int AES::calc_buffer_size(char* text) {
-    uint8_t i = strlen(text);
-    uint8_t buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
-    int length = (buf <= i) ? buf + AES_BLOCKSIZE : length = buf;
-    return length;
-}
-
-void AES::calc_size_n_pad(int in_size)
+int AES::calc_size_n_pad(int in_size)
 {
-    int s_of_p = in_size + 1;
-    if ( s_of_p % AES_BLOCKSIZE == 0){
-        _size = s_of_p;
-    } else {
-        _size = s_of_p +  (AES_BLOCKSIZE-(s_of_p % AES_BLOCKSIZE));
-    }
-    _pad_size = _size - s_of_p;
+    in_size++; // +1 for null terminater on input string
+    int buf = round(in_size / AES_BLOCKSIZE) * AES_BLOCKSIZE;
+    _size = (buf <= in_size) ? buf + AES_BLOCKSIZE : buf;
+    _pad_size = _size - in_size;
+    
+    return _size;
 }
 
 void AES::padPlaintext(const uint8_t* in, uint8_t* out)
