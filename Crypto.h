@@ -12,7 +12,10 @@
 #define CRYPTO_h
 
 #include <Arduino.h>
+
+#if defined ESP8266
 #include <osapi.h>
+#endif
 
 #define SHA256_SIZE             32
 #define SHA256HMAC_SIZE         32
@@ -136,8 +139,9 @@ class AES
         CIPHER_MODE _cipherMode;
 };
 
+#if defined ESP8266 || defined ESP32
 /**
- * ESP8266 specific random number generator
+ * ESP8266 and ESP32 specific true random number generator
  */
 class RNG
 {
@@ -156,5 +160,7 @@ class RNG
         static uint32_t getLong();
     private:
 };
+#endif
+
 
 #endif
