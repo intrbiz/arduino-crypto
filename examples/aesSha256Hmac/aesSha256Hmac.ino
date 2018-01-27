@@ -18,7 +18,6 @@ SHA256 sha256;
 
 // prints given block of given length in HEX
 void printBlock(uint8_t* block, int length) {
-  ESP.wdtFeed();
   Serial.print(" { ");
   for (int i=0; i<length; i++) {
     Serial.print(block[i], HEX);
@@ -78,7 +77,6 @@ void setup() {
   uint8_t* encrypted = ivEncryptedHmac + AES_KEY_LENGTH;
 
   // AES 128 CBC and pkcs7 padding
-  ESP.wdtFeed();
   aes.process((uint8_t*)packet, encrypted, packetSize);
 
   Serial.printf("Encrypted (%d bytes)", encryptedSize);
@@ -147,7 +145,6 @@ void setup() {
     int decryptedSize = decodedSize - AES_KEY_LENGTH - SHA256HMAC_SIZE;
     char decrypted[decryptedSize];
     AES aesDecryptor(keyEncrypt, iv, AES::AES_MODE_128, AES::CIPHER_DECRYPT);
-    ESP.wdtFeed();
     aesDecryptor.process((uint8_t*)decoded + AES_KEY_LENGTH, (uint8_t*)decrypted, decryptedSize);  
     
     Serial.printf("Decrypted Packet HEX (%d bytes)", decryptedSize);
@@ -155,7 +152,6 @@ void setup() {
   
     Serial.printf("Decrypted Packet (%d bytes):\n", strlen(decrypted));
     Serial.println(decrypted);
-    ESP.wdtFeed();
   }
 }
 
