@@ -5,6 +5,7 @@
  * (http://axtls.sourceforge.net/), Copyright (c) 2008, Cameron Rich.
  * 
  * Ported and refactored by Chris Ellis 2016.
+ * pkcs7 padding routines added by Mike Killewald Nov 26, 2017 (adopted from https://github.com/spaniakos/AES).
  * 
  */
 
@@ -12,10 +13,14 @@
 #define CRYPTO_h
 
 #include <Arduino.h>
+
+#if defined ESP8266
 #include <osapi.h>
+#endif
 
 #define SHA256_SIZE             32
 #define SHA256HMAC_SIZE         32
+#define SHA256HMAC_BLOCKSIZE    64
 #define AES_MAXROUNDS           14
 #define AES_BLOCKSIZE           16
 #define AES_IV_SIZE             16
@@ -84,8 +89,8 @@ class SHA256HMAC
     private:
         void blockXor(const byte *in, byte *out, byte val, byte len);
         SHA256 _hash;
-        byte _innerKey[SHA256_SIZE];
-        byte _outerKey[SHA256_SIZE];
+        byte _innerKey[SHA256HMAC_BLOCKSIZE];
+        byte _outerKey[SHA256HMAC_BLOCKSIZE];
 };
 
 /**
@@ -104,6 +109,7 @@ class AES
             CIPHER_ENCRYPT = 0x01,
             CIPHER_DECRYPT = 0x02
         } CIPHER_MODE;
+        
         /**
          * Create this cipher instance in either encrypt or decrypt mode
          * 
@@ -117,12 +123,68 @@ class AES
          * Either encrypt or decrypt as specified by [cipherMode]
          */
         AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode);
+        
         /**
-         * Either encrypt or decrypt [in] and store into [out] for [length] bytes.
+         * Either encrypt or decrypt [in] and store into [out] for [length] bytes, applying no padding
+         * 
+         * Note: the length must be a multiple of 16 bytes
+         */
+        void processNoPad(const uint8_t *in, uint8_t *out, int length);
+        
+        /**
+         * Either encrypt or decrypt [in] and store into [out] for [length] bytes, applying padding as needed
          * 
          * Note: the length must be a multiple of 16 bytes
          */
         void process(const uint8_t *in, uint8_t *out, int length);
+
+        /** Getter method for size
+         *
+         * This function returns the size
+         * @return an integer, that is the size of the of the padded plaintext,
+         * thus, the size of the ciphertext.
+         */
+        int getSize();
+    
+        /** Setter method for size
+         *
+         * This function sets the size of the plaintext+pad
+         *
+         */
+        void setSize(int size);
+    
+        /** Calculates the size of the plaintext and the padding.
+         *
+         * Calculates the size of the plaintext with the size of the
+         * padding needed. Moreover it stores them in their class variables.
+         *
+         * @param in_size the size of the byte array ex sizeof(plaintext)
+         * @return an int the size of the plaintext plus the padding
+         */
+        int calcSizeAndPad(int in_size);
+    
+        /** Pads the plaintext
+         *
+         * This function pads the plaintext and returns an char array with the
+         * plaintext and the padding in order for the plaintext to be compatible with
+         * 16bit size blocks required by AES
+         *
+         * @param in the string of the plaintext in a byte array
+         * @param out The string of the out array.
+         * @return no return, The padded plaintext is stored in the out pointer.
+         */
+        void padPlaintext(const uint8_t* in, uint8_t* out);
+    
+        /** Check the if the padding is correct.
+         *
+         * This functions checks the padding of the plaintext.
+         *
+         * @param in the string of the plaintext in a byte array
+         * @param size the size of the string
+         * @return true if correct / false if not
+         */
+        bool checkPad(uint8_t* in, int lsize);
+
     private:
         void encryptCBC(const uint8_t *in, uint8_t *out, int length);
         void decryptCBC(const uint8_t *in, uint8_t *out, int length);
@@ -133,11 +195,16 @@ class AES
         uint16_t _key_size;
         uint32_t _ks[(AES_MAXROUNDS+1)*8];
         uint8_t _iv[AES_IV_SIZE];
+        int _pad_size; // size of padding to add to plaintext
+        int _size; // size of plaintext plus padding to be ciphered
+        uint8_t _arr_pad[15];
+
         CIPHER_MODE _cipherMode;
 };
 
+#if defined ESP8266 || defined ESP32
 /**
- * ESP8266 specific random number generator
+ * ESP8266 and ESP32 specific true random number generator
  */
 class RNG
 {
@@ -156,5 +223,7 @@ class RNG
         static uint32_t getLong();
     private:
 };
+#endif
+
 
 #endif

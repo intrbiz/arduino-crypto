@@ -5,6 +5,7 @@
  * (http://axtls.sourceforge.net/), Copyright (c) 2008, Cameron Rich.
  * 
  * Ported and refactored by Chris Ellis 2016.
+ * pkcs7 padding routines added by Mike Killewald Nov 26, 2017 (adopted from https://github.com/spaniakos/AES).
  * 
  */
 
@@ -247,6 +248,9 @@ void SHA256::SHA256_Process(const byte digest[64])
     state[5] += F;
     state[6] += G;
     state[7] += H;
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 /**
@@ -315,6 +319,9 @@ void SHA256::doFinal(byte *digest)
     PUT_UINT32(state[5], digest, 20);
     PUT_UINT32(state[6], digest, 24);
     PUT_UINT32(state[7], digest, 28);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 bool SHA256::matches(const byte *expected)
@@ -326,6 +333,9 @@ bool SHA256::matches(const byte *expected)
         if (expected[i] != theDigest[i])
             return false;
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
     return true;
 }
 
@@ -507,6 +517,9 @@ void AES::encrypt(uint32_t *data)
         for (row = 0; row < 4; row++)
             data[row] = tmp[row] ^ *(k++);
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 /**
@@ -563,6 +576,9 @@ void AES::decrypt(uint32_t *data)
         for (row = 4; row > 0; row--)
             data[row-1] = tmp[row-1] ^ *(--k);
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode)
@@ -573,6 +589,22 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     uint32_t *W, tmp, tmp2;
     const unsigned char *ip;
     int words;
+
+    _arr_pad[0] = 0x01;
+    _arr_pad[1] = 0x02;
+    _arr_pad[2] = 0x03;
+    _arr_pad[3] = 0x04;
+    _arr_pad[4] = 0x05;
+    _arr_pad[5] = 0x06;
+    _arr_pad[6] = 0x07;
+    _arr_pad[7] = 0x08;
+    _arr_pad[8] = 0x09;
+    _arr_pad[9] = 0x0a;
+    _arr_pad[10] = 0x0b;
+    _arr_pad[11] = 0x0c;
+    _arr_pad[12] = 0x0d;
+    _arr_pad[13] = 0x0e;
+    _arr_pad[14] = 0x0f;
 
     switch (mode)
     {
@@ -642,14 +674,84 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     {
         convertKey();
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
+}
+
+int AES::getSize()
+{
+    return _size;
+}
+
+void AES::setSize(int size)
+{
+    _size = size;
+}
+
+int AES::calcSizeAndPad(int in_size)
+{
+    in_size++; // +1 for null terminater on input string
+    int buf = round(in_size / AES_BLOCKSIZE) * AES_BLOCKSIZE;
+    _size = (buf <= in_size) ? buf + AES_BLOCKSIZE : buf;
+    _pad_size = _size - in_size;
+    return _size;
+}
+
+void AES::padPlaintext(const uint8_t* in, uint8_t* out)
+{
+    memcpy(out, in, _size);
+    for (int i = _size - _pad_size; i < _size; i++)
+    {
+        out[i] = _arr_pad[_pad_size - 1];
+    }
+}
+
+bool AES::checkPad(uint8_t* in, int lsize)
+{
+    if (in[lsize-1] <= 0x0f)
+    {
+        int lpad = (int)in[lsize-1];
+        for (int i = lsize - 1; i >= lsize-lpad; i--)
+        {
+            if (_arr_pad[lpad - 1] != in[i])
+            {
+                return false;
+            }
+        }
+    } 
+    else 
+    {
+        return true;
+    }
+    return true;
+}
+
+void AES::processNoPad(const uint8_t *in, uint8_t *out, int length)
+{
+    if (_cipherMode == CIPHER_ENCRYPT)
+    {
+        encryptCBC(in, out, length);
+    } 
+    else 
+    {
+        decryptCBC(in, out, length);
+    }
 }
 
 void AES::process(const uint8_t *in, uint8_t *out, int length)
 {
     if (_cipherMode == CIPHER_ENCRYPT)
-        encryptCBC(in, out, length);
-    else
+    {
+        calcSizeAndPad(length);
+        uint8_t in_pad[getSize()];
+        padPlaintext(in, in_pad);
+        encryptCBC(in_pad, out, getSize());
+    } 
+    else 
+    {
         decryptCBC(in, out, length);
+    }
 }
 
 void AES::encryptCBC(const uint8_t *in, uint8_t *out, int length)
@@ -686,6 +788,9 @@ void AES::encryptCBC(const uint8_t *in, uint8_t *out, int length)
     for (i = 0; i < 4; i++)
         iv[i] = crypto_htonl(tout[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
@@ -726,6 +831,9 @@ void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
     for (i = 0; i < 4; i++)
         iv[i] = crypto_htonl(bufxor[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 void AES::convertKey()
@@ -744,33 +852,59 @@ void AES::convertKey()
     }
 }
 
+#if defined ESP8266 || defined ESP32
 /**
- * ESP8266 specific RNG which use seems to use the hardware RNG provided on
- * the chip
+ * ESP8266 and ESP32 specific hardware true random number generator.
+ * 
+ * Acording to the ESP32 documentation, you should not call the tRNG 
+ * faster than 5MHz
+ * 
  */
 
 void RNG::fill(uint8_t *dst, unsigned int length)
 {
-    // ESP8266 only
+    // ESP8266 and ESP32 only
     for (int i = 0; i < length; i++)
     {
         dst[i] = get();
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 byte RNG::get()
 {
+#if defined ESP32
+    // ESP32 only
+    uint32_t* randReg = (uint32_t*) 0x3FF75144;
+    return (byte) *randReg;
+#elif defined ESP8266
     // ESP8266 only
     uint32_t* randReg = (uint32_t*) 0x3FF20E44L;
     return (byte) *randReg;
+#else
+    // NOT SUPPORTED
+    return 0;
+#endif
 }
 
 uint32_t RNG::getLong()
 {
+#if defined ESP32
+    // ESP32 only
+    uint32_t* randReg = (uint32_t*) 0x3FF75144;
+    return (byte) *randReg;
+#elif defined ESP8266
     // ESP8266 only
     uint32_t* randReg = (uint32_t*) 0x3FF20E44L;
     return *randReg;
+#else
+    // NOT SUPPORTED
+    return 0;
+#endif
 }
+#endif
 
 
 /**
@@ -780,31 +914,29 @@ uint32_t RNG::getLong()
 SHA256HMAC::SHA256HMAC(const byte *key, unsigned int keyLen)
 {
     // sort out the key
-    byte theKey[SHA256_SIZE];
-    if (keyLen > SHA256_SIZE)
+    byte theKey[SHA256HMAC_BLOCKSIZE];
+    memset(theKey, 0, SHA256HMAC_BLOCKSIZE);
+    if (keyLen > SHA256HMAC_BLOCKSIZE)
     {
         // take a hash of the key
         SHA256 keyHahser;
         keyHahser.doUpdate(key, keyLen);
         keyHahser.doFinal(theKey);
     }
-    else if (keyLen < SHA256_SIZE)
+    else 
     {
-        // pad the key with zeros
-        memset(theKey, 0, SHA256_SIZE);
+        // we already set the buffer to 0s, so just copy keyLen
+        // bytes from key
         memcpy(theKey, key, keyLen);
     }
-    else
-    {
-        memcpy(theKey, key, keyLen);
-    }
+    // explicitly zero pads
+    memset(_innerKey, 0, SHA256HMAC_BLOCKSIZE);
+    memset(_outerKey, 0, SHA256HMAC_BLOCKSIZE);
     // compute the keys
-    memset(_innerKey, 0, SHA256_SIZE);
-    memset(_outerKey, 0, SHA256_SIZE);
-    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256_SIZE);
-    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256_SIZE);
+    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256HMAC_BLOCKSIZE);
+    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256HMAC_BLOCKSIZE);
     // start the intermediate hash
-    _hash.doUpdate(_innerKey, SHA256_SIZE);
+    _hash.doUpdate(_innerKey, SHA256HMAC_BLOCKSIZE);
 }
 
 void SHA256HMAC::doUpdate(const byte *msg, unsigned int len)
@@ -819,7 +951,7 @@ void SHA256HMAC::doFinal(byte *digest)
     _hash.doFinal(interHash);
     // compute the final hash
     SHA256 finalHash;
-    finalHash.doUpdate(_outerKey, SHA256_SIZE);
+    finalHash.doUpdate(_outerKey, SHA256HMAC_BLOCKSIZE);
     finalHash.doUpdate(interHash, SHA256_SIZE);
     finalHash.doFinal(digest);
 }
