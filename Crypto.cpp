@@ -248,6 +248,9 @@ void SHA256::SHA256_Process(const byte digest[64])
     state[5] += F;
     state[6] += G;
     state[7] += H;
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 /**
@@ -316,6 +319,9 @@ void SHA256::doFinal(byte *digest)
     PUT_UINT32(state[5], digest, 20);
     PUT_UINT32(state[6], digest, 24);
     PUT_UINT32(state[7], digest, 28);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 bool SHA256::matches(const byte *expected)
@@ -327,6 +333,9 @@ bool SHA256::matches(const byte *expected)
         if (expected[i] != theDigest[i])
             return false;
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
     return true;
 }
 
@@ -508,6 +517,9 @@ void AES::encrypt(uint32_t *data)
         for (row = 0; row < 4; row++)
             data[row] = tmp[row] ^ *(k++);
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 /**
@@ -564,6 +576,9 @@ void AES::decrypt(uint32_t *data)
         for (row = 4; row > 0; row--)
             data[row-1] = tmp[row-1] ^ *(--k);
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode)
@@ -659,57 +674,82 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     {
         convertKey();
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
-int AES::get_size(){
+int AES::getSize()
+{
     return _size;
 }
 
-void AES::set_size(int sizel){
-    _size = sizel;
+void AES::setSize(int size)
+{
+    _size = size;
 }
 
-int AES::calc_size_n_pad(int in_size)
+int AES::calcSizeAndPad(int in_size)
 {
     in_size++; // +1 for null terminater on input string
     int buf = round(in_size / AES_BLOCKSIZE) * AES_BLOCKSIZE;
     _size = (buf <= in_size) ? buf + AES_BLOCKSIZE : buf;
     _pad_size = _size - in_size;
-    
     return _size;
 }
 
 void AES::padPlaintext(const uint8_t* in, uint8_t* out)
 {
     memcpy(out, in, _size);
-    for (int i = _size - _pad_size; i < _size; i++) {
+    for (int i = _size - _pad_size; i < _size; i++)
+    {
         out[i] = _arr_pad[_pad_size - 1];
     }
 }
 
-bool AES::CheckPad(uint8_t* in, int lsize)
+bool AES::checkPad(uint8_t* in, int lsize)
 {
-    if (in[lsize-1] <= 0x0f) {
+    if (in[lsize-1] <= 0x0f)
+    {
         int lpad = (int)in[lsize-1];
-        for (int i = lsize - 1; i >= lsize-lpad; i--){
-            if (_arr_pad[lpad - 1] != in[i]){
+        for (int i = lsize - 1; i >= lsize-lpad; i--)
+        {
+            if (_arr_pad[lpad - 1] != in[i])
+            {
                 return false;
             }
         }
-    } else {
+    } 
+    else 
+    {
         return true;
     }
     return true;
 }
 
+void AES::processNoPad(const uint8_t *in, uint8_t *out, int length)
+{
+    if (_cipherMode == CIPHER_ENCRYPT)
+    {
+        encryptCBC(in, out, length);
+    } 
+    else 
+    {
+        decryptCBC(in, out, length);
+    }
+}
+
 void AES::process(const uint8_t *in, uint8_t *out, int length)
 {
-    if (_cipherMode == CIPHER_ENCRYPT) {
-        calc_size_n_pad(length);
-        uint8_t in_pad[get_size()];
+    if (_cipherMode == CIPHER_ENCRYPT)
+    {
+        calcSizeAndPad(length);
+        uint8_t in_pad[getSize()];
         padPlaintext(in, in_pad);
-        encryptCBC(in_pad, out, get_size());
-    } else {
+        encryptCBC(in_pad, out, getSize());
+    } 
+    else 
+    {
         decryptCBC(in, out, length);
     }
 }
@@ -748,6 +788,9 @@ void AES::encryptCBC(const uint8_t *in, uint8_t *out, int length)
     for (i = 0; i < 4; i++)
         iv[i] = crypto_htonl(tout[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
@@ -788,6 +831,9 @@ void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
     for (i = 0; i < 4; i++)
         iv[i] = crypto_htonl(bufxor[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 void AES::convertKey()
@@ -822,6 +868,9 @@ void RNG::fill(uint8_t *dst, unsigned int length)
     {
         dst[i] = get();
     }
+#if defined ESP8266
+    ESP.wdtFeed();
+#endif
 }
 
 byte RNG::get()

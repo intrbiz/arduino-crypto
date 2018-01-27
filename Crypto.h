@@ -109,6 +109,7 @@ class AES
             CIPHER_ENCRYPT = 0x01,
             CIPHER_DECRYPT = 0x02
         } CIPHER_MODE;
+        
         /**
          * Create this cipher instance in either encrypt or decrypt mode
          * 
@@ -122,8 +123,16 @@ class AES
          * Either encrypt or decrypt as specified by [cipherMode]
          */
         AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode);
+        
         /**
-         * Either encrypt or decrypt [in] and store into [out] for [length] bytes.
+         * Either encrypt or decrypt [in] and store into [out] for [length] bytes, applying no padding
+         * 
+         * Note: the length must be a multiple of 16 bytes
+         */
+        void processNoPad(const uint8_t *in, uint8_t *out, int length);
+        
+        /**
+         * Either encrypt or decrypt [in] and store into [out] for [length] bytes, applying padding as needed
          * 
          * Note: the length must be a multiple of 16 bytes
          */
@@ -135,14 +144,14 @@ class AES
          * @return an integer, that is the size of the of the padded plaintext,
          * thus, the size of the ciphertext.
          */
-        int get_size();
+        int getSize();
     
         /** Setter method for size
          *
          * This function sets the size of the plaintext+pad
          *
          */
-        void set_size(int sizel);
+        void setSize(int size);
     
         /** Calculates the size of the plaintext and the padding.
          *
@@ -152,7 +161,7 @@ class AES
          * @param in_size the size of the byte array ex sizeof(plaintext)
          * @return an int the size of the plaintext plus the padding
          */
-        int calc_size_n_pad(int in_size);
+        int calcSizeAndPad(int in_size);
     
         /** Pads the plaintext
          *
@@ -174,7 +183,7 @@ class AES
          * @param size the size of the string
          * @return true if correct / false if not
          */
-        bool CheckPad(uint8_t* in, int lsize);
+        bool checkPad(uint8_t* in, int lsize);
 
     private:
         void encryptCBC(const uint8_t *in, uint8_t *out, int length);
