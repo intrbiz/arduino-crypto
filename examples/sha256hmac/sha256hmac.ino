@@ -36,8 +36,9 @@ void setup()
   hmac.doFinal(authCode);
   
   /* authCode now contains our 32 byte authentication code */
-  for (byte i; i < SHA256HMAC_SIZE; i++)
+  for (byte i=0; i < SHA256HMAC_SIZE; i++)
   {
+      if (authCode[i]<0x10) { Serial.print('0'); }
       Serial.print(authCode[i], HEX);
   }
 }

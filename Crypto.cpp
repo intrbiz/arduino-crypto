@@ -5,6 +5,7 @@
  * (http://axtls.sourceforge.net/), Copyright (c) 2008, Cameron Rich.
  * 
  * Ported and refactored by Chris Ellis 2016.
+ * pkcs7 padding routines added by Mike Killewald Nov 26, 2017 (adopted from https://github.com/spaniakos/AES).
  * 
  */
 
@@ -574,6 +575,22 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     const unsigned char *ip;
     int words;
 
+    _arr_pad[0] = 0x01;
+    _arr_pad[1] = 0x02;
+    _arr_pad[2] = 0x03;
+    _arr_pad[3] = 0x04;
+    _arr_pad[4] = 0x05;
+    _arr_pad[5] = 0x06;
+    _arr_pad[6] = 0x07;
+    _arr_pad[7] = 0x08;
+    _arr_pad[8] = 0x09;
+    _arr_pad[9] = 0x0a;
+    _arr_pad[10] = 0x0b;
+    _arr_pad[11] = 0x0c;
+    _arr_pad[12] = 0x0d;
+    _arr_pad[13] = 0x0e;
+    _arr_pad[14] = 0x0f;
+
     switch (mode)
     {
         case AES_MODE_128:
@@ -644,12 +661,57 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     }
 }
 
+int AES::get_size(){
+    return _size;
+}
+
+void AES::set_size(int sizel){
+    _size = sizel;
+}
+
+int AES::calc_size_n_pad(int in_size)
+{
+    in_size++; // +1 for null terminater on input string
+    int buf = round(in_size / AES_BLOCKSIZE) * AES_BLOCKSIZE;
+    _size = (buf <= in_size) ? buf + AES_BLOCKSIZE : buf;
+    _pad_size = _size - in_size;
+    
+    return _size;
+}
+
+void AES::padPlaintext(const uint8_t* in, uint8_t* out)
+{
+    memcpy(out, in, _size);
+    for (int i = _size - _pad_size; i < _size; i++) {
+        out[i] = _arr_pad[_pad_size - 1];
+    }
+}
+
+bool AES::CheckPad(uint8_t* in, int lsize)
+{
+    if (in[lsize-1] <= 0x0f) {
+        int lpad = (int)in[lsize-1];
+        for (int i = lsize - 1; i >= lsize-lpad; i--){
+            if (_arr_pad[lpad - 1] != in[i]){
+                return false;
+            }
+        }
+    } else {
+        return true;
+    }
+    return true;
+}
+
 void AES::process(const uint8_t *in, uint8_t *out, int length)
 {
-    if (_cipherMode == CIPHER_ENCRYPT)
-        encryptCBC(in, out, length);
-    else
+    if (_cipherMode == CIPHER_ENCRYPT) {
+        calc_size_n_pad(length);
+        uint8_t in_pad[get_size()];
+        padPlaintext(in, in_pad);
+        encryptCBC(in_pad, out, get_size());
+    } else {
         decryptCBC(in, out, length);
+    }
 }
 
 void AES::encryptCBC(const uint8_t *in, uint8_t *out, int length)
@@ -803,31 +865,29 @@ uint32_t RNG::getLong()
 SHA256HMAC::SHA256HMAC(const byte *key, unsigned int keyLen)
 {
     // sort out the key
-    byte theKey[SHA256_SIZE];
-    if (keyLen > SHA256_SIZE)
+    byte theKey[SHA256HMAC_BLOCKSIZE];
+    memset(theKey, 0, SHA256HMAC_BLOCKSIZE);
+    if (keyLen > SHA256HMAC_BLOCKSIZE)
     {
         // take a hash of the key
         SHA256 keyHahser;
         keyHahser.doUpdate(key, keyLen);
         keyHahser.doFinal(theKey);
     }
-    else if (keyLen < SHA256_SIZE)
+    else 
     {
-        // pad the key with zeros
-        memset(theKey, 0, SHA256_SIZE);
+        // we already set the buffer to 0s, so just copy keyLen
+        // bytes from key
         memcpy(theKey, key, keyLen);
     }
-    else
-    {
-        memcpy(theKey, key, keyLen);
-    }
+    // explicitly zero pads
+    memset(_innerKey, 0, SHA256HMAC_BLOCKSIZE);
+    memset(_outerKey, 0, SHA256HMAC_BLOCKSIZE);
     // compute the keys
-    memset(_innerKey, 0, SHA256_SIZE);
-    memset(_outerKey, 0, SHA256_SIZE);
-    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256_SIZE);
-    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256_SIZE);
+    blockXor(theKey, _innerKey, HMAC_IPAD, SHA256HMAC_BLOCKSIZE);
+    blockXor(theKey, _outerKey, HMAC_OPAD, SHA256HMAC_BLOCKSIZE);
     // start the intermediate hash
-    _hash.doUpdate(_innerKey, SHA256_SIZE);
+    _hash.doUpdate(_innerKey, SHA256HMAC_BLOCKSIZE);
 }
 
 void SHA256HMAC::doUpdate(const byte *msg, unsigned int len)
@@ -842,7 +902,7 @@ void SHA256HMAC::doFinal(byte *digest)
     _hash.doFinal(interHash);
     // compute the final hash
     SHA256 finalHash;
-    finalHash.doUpdate(_outerKey, SHA256_SIZE);
+    finalHash.doUpdate(_outerKey, SHA256HMAC_BLOCKSIZE);
     finalHash.doUpdate(interHash, SHA256_SIZE);
     finalHash.doFinal(digest);
 }

@@ -1,0 +1,47 @@
+#######################################
+# Syntax Coloring Map For Crypto
+#######################################
+
+#######################################
+# Library (KEYWORD3)
+#######################################
+
+Crypto KEYWORD3
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SHA256	KEYWORD1
+SHA256HMAC	KEYWORD1
+AES	KEYWORD1
+RNG	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+doUpdate	KEYWORD2
+doFinal	KEYWORD2
+matches	KEYWORD2
+AES	KEYWORD2
+process	KEYWORD2
+fill	KEYWORD2
+get	KEYWORD2
+getLong	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+SHA256_SIZE	LITERAL1
+SHA256HMAC_SIZE	LITERAL1
+SHA256HMAC_BLOCKSIZE	LITERAL1
+AES_MAXROUNDS	LITERAL1
+AES_BLOCKSIZE	LITERAL1
+AES_IV_SIZE	LITERAL1
+AES_IV_LENGTH	LITERAL1
+AES_128_KEY_LENGTH	LITERAL1
+AES_256_KEY_LENGTH	LITERAL1
+HMAC_OPAD	LITERAL1
+HMAC_IPAD	LITERAL1
