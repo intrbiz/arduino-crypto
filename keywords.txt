@@ -6,7 +6,7 @@
 # Library (KEYWORD3)
 #######################################
 
-Crypto KEYWORD3
+Crypto	KEYWORD3
 
 #######################################
 # Datatypes (KEYWORD1)
