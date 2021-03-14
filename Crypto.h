@@ -51,6 +51,10 @@ class SHA256
          */
         bool matches(const byte *expected);
     private:
+        /**
+         * Resets the internals of the class to compute a new correct hash! 
+         */
+        void reset();
         void SHA256_Process(const byte digest[64]);
         uint32_t total[2];
         uint32_t state[8];

@@ -107,6 +107,11 @@ static const byte sha256_padding[64] =
  */
 SHA256::SHA256()
 {
+    this->reset();
+}
+
+void SHA256::reset() 
+{
     total[0] = 0;
     total[1] = 0;
     state[0] = 0x6A09E667;
@@ -322,6 +327,7 @@ void SHA256::doFinal(byte *digest)
 #if defined ESP8266
     ESP.wdtFeed();
 #endif
+    this->reset(); // Reset the internals, so we can calculate the next hash!
 }
 
 bool SHA256::matches(const byte *expected)
