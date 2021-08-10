@@ -26,7 +26,7 @@
 #define AES_IV_SIZE             16
 #define AES_IV_LENGTH           16
 #define AES_128_KEY_LENGTH      16
-#define AES_256_KEY_LENGTH      16
+#define AES_256_KEY_LENGTH      32
 
 /**
  * Compute a SHA256 hash
@@ -38,7 +38,7 @@ class SHA256
         /**
          * Update the hash with new data
          */
-        void doUpdate(const byte *msg, int len);
+        void doUpdate(const byte *msg, unsigned int len);
         void doUpdate(const char *msg, unsigned int len) { doUpdate((byte*) msg, len); }
         void doUpdate(const char *msg) { doUpdate((byte*) msg, strlen(msg)); }
         /**
